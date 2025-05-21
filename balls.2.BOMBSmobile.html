@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bouncing Balls</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  </head>
+  <body>
+    <script>
+      let balls = [];
+	  let ballImages = [];
+	 let plusSigns = [];
+      let plusSpawnInterval = 4000; // 5 seconds
+      let lastPlusSpawnTime = 0;
+	  let speedBoosts = [];
+		let speedBoostSpawnInterval = 7000;  // spawn every 7 seconds (adjust as needed)
+	let lastSpeedBoostSpawnTime = 0;
+	  let bombs = [];
+let bombImg;
+let bombSpawnInterval = 3000;  // spawn every 6 seconds
+let lastBombSpawnTime = 0;
+	  
+	function preload() {
+  ballImages = [
+    { img: loadImage("ballimg1.png"), label: "Larry the Cable Guy" },
+    { img: loadImage("ballimg2.png"), label: "Dywane Wade" },
+    { img: loadImage("ballimg3.png"), label: "John Malkovich" },
+    { img: loadImage("ballimg4.png"), label: "Kenny Chesney" },
+    { img: loadImage("ballimg5.png"), label: "Ray Romano" },
+    { img: loadImage("ballimg6.png"), label: "Anna Gunn" },
+    { img: loadImage("ballimg7.png"), label: "Lil Wayne" },
+    { img: loadImage("ballimg8.png"), label: "Brendan Fraser" },
+    { img: loadImage("ballimg9.png"), label: "Jerry Seinfeld" },
+    { img: loadImage("ballimg10.png"), label: "Usher" },
+    { img: loadImage("ballimg11.png"), label: "Audrey Hepburn" },
+    { img: loadImage("ballimg12.png"), label: "Sarah Jessica Parker" },
+    { img: loadImage("ballimg13.png"), label: "Claire Danes" }
+  ];
+  bombImg = loadImage("bomb.png"); // make sure bomb.png is in your project folder
+}
+	  
+	  
+	  
+     function setup() {
+  createCanvas(windowWidth, windowHeight);
+  noStroke();
+
+  for (let i = 0; i < ballImages.length; i++) {
+    let b = new Ball(
+      random(width),
+      random(height),
+      35,
+      ballImages[i].img,
+      ballImages[i].label
+    );
+    balls.push(b);
+  }
+}
+
+      function draw() {
+        background(20);
+
+        for (let ball of balls) {
+          ball.update();
+          ball.checkEdges();
+          ball.display();
+        }
+		if (millis() - lastSpeedBoostSpawnTime > speedBoostSpawnInterval) {
+  speedBoosts.push(new SpeedBoost(random(50, width - 100), random(50, height - 50)));
+  lastSpeedBoostSpawnTime = millis();
+}
+		  // Spawn plus signs every 5 seconds
+  if (millis() - lastPlusSpawnTime > plusSpawnInterval) {
+   for (let i = 0; i < 3; i++) {
+  plusSigns.push(new PlusSign(random(50, width - 50), random(50, height - 50)));
+}
+    lastPlusSpawnTime = millis();
+  }
+
+  // Display plus signs and check ball collision with plus signs
+  for (let i = plusSigns.length - 1; i >= 0; i--) {
+    let plus = plusSigns[i];
+    plus.display();
+
+    for (let ball of balls) {
+      let d = dist(ball.pos.x, ball.pos.y, plus.pos.x, plus.pos.y);
+      if (d < ball.radius + plus.size / 2) {
+       let boost = 100 / ball.radius;  // smaller ball = bigger boost
+ball.radius += boost;   // increase ball size
+        plusSigns.splice(i, 1);  // remove plus sign from array
+        break; // only one ball can get it
+      }
+    }
+  }
+
+		for (let i = speedBoosts.length - 1; i >= 0; i--) {
+  let boost = speedBoosts[i];
+  boost.display();
+
+  for (let ball of balls) {
+    let d = dist(ball.pos.x, ball.pos.y, boost.pos.x + boost.size / 2, boost.pos.y);
+    if (d < ball.radius + boost.size / 2) {
+      ball.vel.mult(2);   // multiply ball velocity by 5
+      speedBoosts.splice(i, 1);  // remove this speed boost from array
+      break; // only one ball can get it
+    }
+  }
+}
+
+		
+
+        // Check collisions between every pair of balls
+        for (let i = 0; i < balls.length; i++) {
+          for (let j = i + 1; j < balls.length; j++) {
+            resolveBallCollision(balls[i], balls[j]);
+          }
+        }
+
+
+if (millis() - lastBombSpawnTime > bombSpawnInterval) {
+  bombs.push(new Bomb(random(50, width - 50), random(50, height - 50)));
+  lastBombSpawnTime = millis();
+}
+
+// Display bombs and check collision
+for (let i = bombs.length - 1; i >= 0; i--) {
+  let bomb = bombs[i];
+  bomb.display();
+
+  for (let j = 0; j < balls.length; j++) {
+    let ball = balls[j];
+    let d = dist(ball.pos.x, ball.pos.y, bomb.pos.x, bomb.pos.y);
+
+    if (d < ball.radius + bomb.size / 2) {
+      let damage = ball.radius * 0.4; // hit for 40% of current size
+ball.radius = max(5, ball.radius - damage); // reduce ball size
+      bombs.splice(i, 1); // remove bomb
+      break;
+    }
+  }
+}
+
+
+      }
+
+
+
+
+
+
+	  
+	  class Bomb {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.size = 40;
+    this.exploded = false;
+  }
+
+  display() {
+    imageMode(CENTER);
+    image(bombImg, this.pos.x, this.pos.y, this.size, this.size);
+  }
+}
+	  
+	  
+class PlusSign {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.size = 30; // size of the + sign arms
+  }
+
+  display() {
+    stroke(0, 255, 0);
+    strokeWeight(5);
+    // Draw + sign centered at pos
+    line(this.pos.x - this.size / 2, this.pos.y, this.pos.x + this.size / 2, this.pos.y);
+    line(this.pos.x, this.pos.y - this.size / 2, this.pos.x, this.pos.y + this.size / 2);
+  }
+}
+
+class SpeedBoost {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.size = 60;  // bigger than plus signs
+    this.color = color(255, 165, 0); // bright orange, for example
+  }
+
+  display() {
+    stroke(this.color);
+    strokeWeight(5);
+    noFill();
+
+    // Draw three right-facing arrows stacked vertically
+    
+    // Top arrow
+    line(this.pos.x, this.pos.y - 20, this.pos.x + this.size, this.pos.y - 20);
+    line(this.pos.x + this.size, this.pos.y - 20, this.pos.x + this.size - 10, this.pos.y - 30);
+    line(this.pos.x + this.size, this.pos.y - 20, this.pos.x + this.size - 10, this.pos.y - 10);
+
+    // Middle arrow
+    line(this.pos.x, this.pos.y, this.pos.x + this.size, this.pos.y);
+    line(this.pos.x + this.size, this.pos.y, this.pos.x + this.size - 10, this.pos.y - 10);
+    line(this.pos.x + this.size, this.pos.y, this.pos.x + this.size - 10, this.pos.y + 10);
+
+    // Bottom arrow
+    line(this.pos.x, this.pos.y + 20, this.pos.x + this.size, this.pos.y + 20);
+    line(this.pos.x + this.size, this.pos.y + 20, this.pos.x + this.size - 10, this.pos.y + 10);
+    line(this.pos.x + this.size, this.pos.y + 20, this.pos.x + this.size - 10, this.pos.y + 30);
+  }
+}
+
+
+
+    class Ball {
+  constructor(x, y, r, img, label) {
+    this.pos = createVector(x, y);
+    this.vel = p5.Vector.random2D().mult(5);
+    this.radius = r;
+    this.mass = r;
+    this.img = img;
+    this.label = label; // store the text
+  }
+
+  update() {
+    this.pos.add(this.vel);
+  }
+
+  checkEdges() {
+    if (this.pos.x - this.radius <= 0 || this.pos.x + this.radius >= width) {
+      this.vel.x *= -1;
+      this.pos.x = constrain(this.pos.x, this.radius, width - this.radius);
+    }
+    if (this.pos.y - this.radius <= 0 || this.pos.y + this.radius >= height) {
+      this.vel.y *= -1;
+      this.pos.y = constrain(this.pos.y, this.radius, height - this.radius);
+    }
+  }
+
+  display() {
+    imageMode(CENTER);
+    image(this.img, this.pos.x, this.pos.y, this.radius * 2, this.radius * 2);
+    
+    // Optional: draw label under the ball
+    fill(255);
+    noStroke();
+    textAlign(CENTER);
+   textSize(this.radius * 0.5);
+    text(this.label, this.pos.x, this.pos.y + this.radius + 15);
+    textFont('Impact')
+}
+}
+
+      function resolveBallCollision(b1, b2) {
+        let distVec = p5.Vector.sub(b2.pos, b1.pos);
+        let dist = distVec.mag();
+        let minDist = b1.radius + b2.radius;
+
+        if (dist < minDist) {
+          // Move balls apart to prevent overlap
+          let overlap = (minDist - dist) / 2;
+          let correction = distVec.copy().normalize().mult(overlap);
+          b1.pos.sub(correction);
+          b2.pos.add(correction);
+
+          // Normalized collision vector
+          let normal = distVec.copy().normalize();
+
+          // Project velocities onto the normal
+          let v1n = normal.copy().mult(p5.Vector.dot(b1.vel, normal));
+          let v1t = p5.Vector.sub(b1.vel, v1n);
+          let v2n = normal.copy().mult(p5.Vector.dot(b2.vel, normal));
+          let v2t = p5.Vector.sub(b2.vel, v2n);
+
+          // Swap the normal components of velocity (ideal elastic collision)
+          b1.vel = p5.Vector.add(v1t, v2n);
+          b2.vel = p5.Vector.add(v2t, v1n);
+		 let bigger, smaller;
+if (b1.radius > b2.radius) {
+  bigger = b1;
+  smaller = b2;
+} else if (b2.radius > b1.radius) {
+  bigger = b2;
+  smaller = b1;
+} else {
+  // Same size - no size transfer
+  return;
+}
+
+// Calculate 15% of smaller ball radius to transfer
+let transferAmount = smaller.radius * 0.15;
+
+// Transfer size
+bigger.radius += transferAmount;
+smaller.radius = max(0.5, smaller.radius - transferAmount);
+}
+        }
+      
+    </script>
+  </body>
+</html>
